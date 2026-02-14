@@ -135,10 +135,20 @@ def rotating_masks_grid(
                 plotter.subplot(row, col)
                 if labels is not None:
                     plotter.add_text(str(labels[col, row]), font_size=6, color='black')
-                
-                plotter.add_mesh(surf, color='lightblue', smooth_shading=True)
-                plotter.camera_position = [pos, center, (0, 0, 1)] # Simple Up-vector
 
+                # Catch empty masks
+                if surf.n_points > 0:
+                    # Only calculate camera and add mesh if points exist
+                    distance = surf.length * 2.5
+                    center = list(surf.center)
+                    pos = center + distance * np.array(vec)
+                    
+                    plotter.add_mesh(surf, color='lightblue', smooth_shading=True)
+                    plotter.camera_position = [pos, center, (0, 0, 1)]
+                else:
+                    # Optional: Add placeholder text so you know it was empty
+                    plotter.add_text("Empty Mask", font_size=5, color='gray')
+                
         # 4. Save and Destroy
         # This is where the RAM resets to zero for the next angle
         file = os.path.join(dir_output, f"mosaic_{i:03d}.png")
@@ -228,10 +238,20 @@ def multiple_mosaic_masks_da(masks: list, directions: dict, labels, columns=None
             plotter.subplot(row, col)
             if labels is not None:
                 plotter.add_text(labels[i], font_size=6, color='black')
-            
-            plotter.add_mesh(surf, color='lightblue', smooth_shading=True)
-            plotter.camera_position = [pos, center, up]
 
+            # Catch empty masks
+            if surf.n_points > 0:
+                # Only calculate camera and add mesh if points exist
+                distance = surf.length * 2.5
+                center = list(surf.center)
+                pos = center + distance * np.array(vec)
+                
+                plotter.add_mesh(surf, color='lightblue', smooth_shading=True)
+                plotter.camera_position = [pos, center, up]
+            else:
+                # Optional: Add placeholder text so you know it was empty
+                plotter.add_text("Empty Mask", font_size=5, color='gray')
+                
         # 1. Initialize the window in the background
         plotter.show(auto_close=False, interactive=False, interactive_update=True)
         

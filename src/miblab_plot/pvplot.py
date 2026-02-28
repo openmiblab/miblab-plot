@@ -8,8 +8,6 @@ import pyvista as pv
 import dbdicom as db
 import zarr
 
-import miblab_ssa as ssa
-
 
 def setup_rendering_env():
 
@@ -68,7 +66,7 @@ def mosaic_masks_dcm(masks, imagefile, labels=None, view_vector=(1, 0, 0)):
 
         # Load data
         vol = db.volume(mask_series, verbose=0)
-        mask_norm = ssa.sdf_ft.smooth_mask(vol.values, order=32)
+        mask_norm = vol.values
 
         # Plot tile
         orig_vol = pv.wrap(mask_norm.astype(float))
@@ -202,8 +200,7 @@ def multiple_mosaic_masks_da(masks: list, directions: dict, labels, columns=None
     
     surfaces = []
     for mask_series in tqdm(masks, desc="Pre-calculating Surfaces"):
-        # Your Spline/RBF smoothing
-        #mask_norm = ssa.sdf_ft.smooth_mask(mask_series[:].astype(bool), order=16)
+        
         mask_norm = mask_series[:].astype(bool)
         
         vol = pv.wrap(mask_norm.astype(np.float32))
@@ -327,7 +324,7 @@ def multiple_mosaic_masks_npz(masks, directions:dict, labels, columns=None, rows
 
         # Load data once
         vol = db.npz.volume(mask_series)
-        mask_norm = ssa.sdf_ft.smooth_mask(vol.values.astype(bool), order=32)
+        mask_norm = vol.values.astype(bool)
 
         orig_vol = pv.wrap(mask_norm.astype(float))
         orig_vol.spacing = [1.0, 1.0, 1.0]
@@ -443,7 +440,7 @@ def mosaic_masks_npz(masks, imagefile, labels=None, view_vector=(1, 0, 0)):
 
         # Load data
         vol = db.npz.volume(mask_series)
-        mask_norm = ssa.sdf_ft.smooth_mask(vol.values.astype(bool), order=32)
+        mask_norm = vol.values.astype(bool)
 
         # Plot tile
         orig_vol = pv.wrap(mask_norm.astype(float))
@@ -456,53 +453,3 @@ def mosaic_masks_npz(masks, imagefile, labels=None, view_vector=(1, 0, 0)):
     plotter.screenshot(imagefile)
     plotter.close()
 
-
-def mosaic_features_npz(features, imagefile, labels=None, view_vector=(1, 0, 0)):
-
-    # Plot settings
-    aspect_ratio = 16/9
-    width = 150
-    height = 150
-
-    # Count nr of mosaics
-    n_mosaics = len(features)
-    nrows = int(np.ceil(np.sqrt((width*n_mosaics)/(aspect_ratio*height))))
-    ncols = int(np.ceil(n_mosaics/nrows))
-
-    plotter = pv.Plotter(
-        window_size=(ncols*width, nrows*height), 
-        shape=(nrows, ncols), 
-        border=False, 
-        # off_screen=True,
-        off_screen=pv.OFF_SCREEN,
-    )
-    plotter.background_color = 'white'
-
-    row = 0
-    col = 0
-    for i, feat in tqdm(enumerate(features), desc=f'Building mosaic'):
-
-        # Set up plotter
-        plotter.subplot(row,col)
-        if labels is not None:
-            plotter.add_text(labels[i], font_size=6)
-        if col == ncols-1:
-            col = 0
-            row += 1
-        else:
-            col += 1
-
-        # Load data
-        ft = np.load(feat)
-        mask_norm = ssa.sdf_ft.mask_from_features(ft['features'], ft['shape'], ft['order'])
-
-        # Plot tile
-        orig_vol = pv.wrap(mask_norm.astype(float))
-        orig_vol.spacing = [1.0, 1.0, 1.0]
-        orig_surface = orig_vol.contour(isosurfaces=[0.5])
-        plotter.add_mesh(orig_surface, color='lightblue', opacity=1.0, style='surface')
-        plotter.camera_position = 'iso'
-        plotter.view_vector(view_vector)  # rotate 180° around vertical axis
-    
-    plotter.screenshot(imagefile)
-    plotter.close()
